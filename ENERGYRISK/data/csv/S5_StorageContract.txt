@@ -1,0 +1,1 @@
+capacity	injRate	injFuelCost	injCost	convRate	r	currStrgL	withRate	withFuelCost	withCost1000000	8197	0	0.01	0.1	0	0	16393	0	0.006

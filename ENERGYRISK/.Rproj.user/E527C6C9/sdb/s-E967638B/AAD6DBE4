@@ -1,0 +1,16 @@
+{
+    "contents" : "#' Schwartz one factor model forward curve function\n#' \n#' @param S is the spot price\n#' @param alpha is the mean reversion rate, \n#' @param mu is the long term level to wich S reverts\n#' @param sig is the spot price volatility\n#' @param s is the original maturity of 1 year\n#' @author Thomas Fillebeen\n#' @export\nFT <- function(S, alpha, mu, sig, s){  \n  eaT = exp(-alpha * s)\n  sig2a = sig * sig / (2 * alpha)\n  FT = exp(log(S) * eaT + (mu - sig2a) * (1 - eaT) + sig2a * (1 - eaT * eaT) / 2)\n  return(FT)\n}\n#' Create Mean Reverting Price Path\n#' \n#' @param logPrice is the log of the spot price\n#' @param param is the simulation process parameters\n#' @param sigrdt ia the spot price volatility in years \n#' @param dt is the time step\n#' @param setRand is the polar method random number generator\n#' @author Thomas Fillebeen\n#' @export\nlnS <- function(logPrice, param, sigrdt, dt, setRand){  \n  lnS = logPrice + (param$alpha*(param$mu-logPrice) \n                             - 0.5*param$sigma^2)*dt + sigrdt*setRand\n  return(lnS)\n}\n#' Rand_polar_rejc\n#' \n#' The polar rejection method is stated algorithmically\n#' \n#' @author Thomas Fillebeen\n#' @export\nrandPolarRejc <- function(){  \n  x2_available = FALSE\n  x1=0;x2=0;u1=0;u2=0;w=0;c=0\n  if(x2_available){\n    x2_available = FALSE\n    randPolarRejc = x2\n  }else{\n    repeat{\n    u1 = runif(1) * 2 - 1\n    u2 = runif(1) * 2 - 1\n    w = u1 * u1 + u2 * u2\n    if(w <= 1){\n      c = sqrt(-2 * log(w) / w)\n      x1 = c * u1\n      x2 = c * u2\n      x2_available <<- TRUE\n      randPolarRejc = x1\n      break\n    }\n  }\n}\n  return(randPolarRejc)\n}",
+    "created" : 1435431132546.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3995064116",
+    "id" : "AAD6DBE4",
+    "lastKnownWriteTime" : 1435235826,
+    "path" : "~/Desktop/AMATH_Summer_UW/CFRM_520/EnergyRisk/ENERGYRISK/R/ES1_F.R",
+    "project_path" : "R/ES1_F.R",
+    "properties" : {
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}

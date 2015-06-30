@@ -1,0 +1,22 @@
+{
+    "contents" : "",
+    "created" : 1435429478419.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "F4E473C7",
+    "lastKnownWriteTime" : 3617902661359518464,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "caption" : "lnSmat1",
+        "contentUrl" : "content?title=lnSmat1&file=91af26a4ae914a9eaaf2328bf8657ac8.htm",
+        "displayedObservations" : 100,
+        "displayedVariables" : 11,
+        "totalObservations" : 100,
+        "variables" : 11
+    },
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}
