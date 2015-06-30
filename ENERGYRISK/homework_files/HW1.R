@@ -161,6 +161,9 @@ FT <- function(S, alpha, mu, sig, s){  #s = forward maturity, alpha = mrr, S = s
   return(FT)
 }
 
+#at-the-money strike price: spread of forwards at t = 0
+K <- abs(FT(params$S, params$alpha, params$mu, params$sigma, .5) - FT(params$S, params$alpha, params$mu, params$sigma, 1))
+
 
 
 

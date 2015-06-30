@@ -1,38 +1,35 @@
-#' Probbility estimation for Simplified Trees: Mean Reversion
-#' 
-#' @param j is the spot price level
-#' @param delta_t is the mean reversion rate, 
-#' @param alpha is the mean reversion rate
-#' @param delta_x price steps
-#' @param vol is the spot price volatility
-#' @author Thomas Fillebeen
-#' @export
+#Code from CFRM 520 Demo 4
+# Trinomial tree model for fitting energy spot prices to forward curves
+
+library(ENERGYRISK)
+
+#load tree parameters: forward curve data, discount rate info
+load("./data/S4_Params.rda")
+
+#parameters
+alpha = 0.338; sigma = 0.305404; dt = 1/12; N = 12
+dx = sigma*sqrt(3*dt)
+params = list("alpha" = alpha, "sigma" = sigma, "dt" = dt, "dx" = dx)
+option_params = list("S0" = S4_Params["F_Price",1], "K" = 21, "ttm" = 1, "r" = S4_Params["R_ts",1], "vol" = params$alpha)
+
+#transition probabilities between trinomial branches at starting node. From Thomas Fillebeen
 prob <- function(j, delta_t, alpha, delta_x, vol){  
-i=0
-pu =  c(1/2*((vol^2*delta_t + alpha^2* j^2*delta_t^2)/
-               delta_x^2 + (i-i)^2 - (alpha* j*delta_t)/delta_x*
-               (1-2*(i-i)) - (i-i)))
-pd = c(1/2*((vol^2*delta_t + alpha^2* j^2*delta_t^2)/
-              delta_x^2 + (i-i)^2 + (alpha* j*delta_t)/delta_x*
-              (1-2*(i-i)) - (i-i)))
-pm = 1 - pu - pd
-prob = t(cbind(pu,pm,pd))
-return(prob)
+  i=0
+  pu =  c(1/2*((vol^2*delta_t + alpha^2* j^2*delta_t^2)/
+                 delta_x^2 + (i-i)^2 - (alpha* j*delta_t)/delta_x*
+                 (1-2*(i-i)) - (i-i)))
+  pd = c(1/2*((vol^2*delta_t + alpha^2* j^2*delta_t^2)/
+                delta_x^2 + (i-i)^2 + (alpha* j*delta_t)/delta_x*
+                (1-2*(i-i)) - (i-i)))
+  pm = 1 - pu - pd
+  prob = t(cbind(pu,pm,pd))
+  return(prob)
 }
-#' Estimating a_i which are chosen to ensure that 
-#' the tree correctly returns the observed forward price curve
-#' 
-#' @param prob 
-#' @param delta_x
-#' @param j.index  
-#' @param df 
-#' @param nbNodes 
-#' @author Thomas Fillebeen
-#' @export
+
+#Estimate mean reversion parameters to fit spot price to forward curve. From Thomas Fillebeen.
 a_i <- function(prob, delta_x, j.index, df, nbNodes){
-  
   # a) Estimate initialize state price accumulation (t = 0)
-  Q = 1; sum_Q = exp(0)*Q;
+  Q = 1; sum_Q = exp(j)*Q;
   # b) Preliminary steps to estimating a_i which are chosen to ensure that 
   # the tree correctly returns the observed forward price curve:
   # -1 b/c we initalized in a) already
@@ -61,7 +58,6 @@ a_i <- function(prob, delta_x, j.index, df, nbNodes){
     # Re-estimate the probabilities for a given j
     j  = level_xt
     prob = prob(j, delta_t, alpha, delta_x, vol)
-    
   }
   # c) Estimate a_i
   a_i = log(S4_Params["P_ts",]* S4_Params["F_Price",]/sum_Q)
@@ -70,4 +66,9 @@ a_i <- function(prob, delta_x, j.index, df, nbNodes){
   temp = a_i[j.index+1]
   return(temp)
 }
+
+df = exp(-option_params$r * params$dt)
+level_x = -c(-params$dx*((N/2):1),params$dx*(0:(N/2))) #trinomial tree prices at time N/2. Symmetric about 0.
+j.index = seq(from=0, to=N/2, by=1) 
+nbNodes = seq(from=1,to=length(level_x),by=2) #number of nodes at each time point
 
