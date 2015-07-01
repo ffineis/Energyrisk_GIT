@@ -29,10 +29,11 @@ return(prob)
 #' @param nbNodes 
 #' @author Thomas Fillebeen
 #' @export
-a_i <- function(prob, delta_x, j.index, df, nbNodes){
+a_i <- function(prob, params, delta_x, j.index, df, nbNodes){
   
   # a) Estimate initialize state price accumulation (t = 0)
   Q = 1; sum_Q = exp(0)*Q;
+  prob = prob(0, params$dt, params$alpha, params$dx, params$sigma)
   # b) Preliminary steps to estimating a_i which are chosen to ensure that 
   # the tree correctly returns the observed forward price curve:
   # -1 b/c we initalized in a) already

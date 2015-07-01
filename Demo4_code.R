@@ -7,8 +7,8 @@ library(ENERGYRISK)
 load("./data/S4_Params.rda")
 
 #parameters
-alpha = 0.338; sigma = 0.305404; dt = 1/12; N = 12
-dx = sigma*sqrt(3*dt)
+alpha = 0.338; sigma = 0.305404; dt = 1/12; N = 12; K = 21
+dx = sigma*sqrt(3*dt); delta_x = dx; vol = sigma; delta_t = dt
 params = list("alpha" = alpha, "sigma" = sigma, "dt" = dt, "dx" = dx)
 option_params = list("S0" = S4_Params["F_Price",1], "K" = 21, "ttm" = 1, "r" = S4_Params["R_ts",1], "vol" = params$alpha)
 
@@ -27,9 +27,12 @@ prob <- function(j, delta_t, alpha, delta_x, vol){
 }
 
 #Estimate mean reversion parameters to fit spot price to forward curve. From Thomas Fillebeen.
-a_i <- function(prob, delta_x, j.index, df, nbNodes){
+a_i <- function(prob, params, delta_x, j.index, df, nbNodes){ 
   # a) Estimate initialize state price accumulation (t = 0)
-  Q = 1; sum_Q = exp(j)*Q;
+  Q = 1; sum_Q = exp(0)*Q;
+  vol  = params$sigma
+  delta_t = params$dt
+  prob = prob(0, params$dt, params$alpha, params$dx, params$sigma)
   # b) Preliminary steps to estimating a_i which are chosen to ensure that 
   # the tree correctly returns the observed forward price curve:
   # -1 b/c we initalized in a) already
@@ -58,6 +61,7 @@ a_i <- function(prob, delta_x, j.index, df, nbNodes){
     # Re-estimate the probabilities for a given j
     j  = level_xt
     prob = prob(j, delta_t, alpha, delta_x, vol)
+    
   }
   # c) Estimate a_i
   a_i = log(S4_Params["P_ts",]* S4_Params["F_Price",]/sum_Q)
@@ -71,4 +75,58 @@ df = exp(-option_params$r * params$dt)
 level_x = -c(-params$dx*((N/2):1),params$dx*(0:(N/2))) #trinomial tree prices at time N/2. Symmetric about 0.
 j.index = seq(from=0, to=N/2, by=1) 
 nbNodes = seq(from=1,to=length(level_x),by=2) #number of nodes at each time point
+
+a_is <- a_i(prob, params, params$dx, j.index, df, nbNodes)
+
+
+#Value a European call. Note: payoff for a call is F-K, payoff for put is K-F
+# Set Call/Put multiplier +/-
+mult = 1
+# i) Fitted forward prices, spot price data fitted correctly
+Forw = exp(as.numeric(a_is[length(j.index)]) + level_x)
+V = pmax(0, mult * (Forw- K))
+
+cat("Time step: ", N/2, "\n", sep="")
+cat("Prices:\n")
+print(Forw)
+cat("Option Values:\n")
+print(V)
+
+i.index = seq(from=N/2-1, to=0, by=-1)
+offset = 1
+  
+for (i in i.index) {
+  level_xt = -c(-delta_x*((i):1),delta_x*(0:i))
+  # Load up probabilities to estimate expected value
+  j  = level_xt
+  prob = prob(j, delta_t, alpha, delta_x, vol)
+  
+  # Sub bind the expectation values together
+  E_V = cbind(V[1:(length(V)-2)],V[2:(length(V)-1)],V[3:length(V)])
+  # F is the vector of prices at each time step and node
+  F = exp(as.numeric(a_is[length(j.index)-offset]) + level_xt)
+  
+  # Primary difference between EUROPEAN and AMERICAN Options
+  # Update the V vector of option values at each time step and node
+  V = pmax(mult*(F-K), df * diag(E_V%*%prob))
+  
+  if (i==0){F = F[1]; V= V[1]}
+  # The following print out is useful for a trinomial function
+  # It will print out the results as the function is running to keep track
+  cat("Time step: ", i, "\n", sep="")
+  cat("Prices:\n")
+  print(F)
+  cat("Option Values:\n")
+  print(V)
+  
+  offset = offset +1 
+}
+
+
+
+
+
+
+
+
 

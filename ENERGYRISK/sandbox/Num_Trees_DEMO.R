@@ -37,7 +37,8 @@ prob
 # Discount factor
 df = exp(-r * delta_t)
 # At the terminal node, there are N/2 asset values (6-month of the year)
-# Level_x represents the max/min price changes that can occur for the terminal node
+# Level_x represents the max/min price changes that can occur for the terminal node,
+# and it's the x_bar ln(S) values when theta = 0 (i.e. dx = alpha*x_bar*dt + sigma*)
 level_x = -c(-delta_x*((N/2):1),delta_x*(0:(N/2)))
 level_x
 j.index = seq(from=0, to=N/2, by=1)
