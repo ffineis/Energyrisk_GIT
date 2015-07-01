@@ -163,8 +163,12 @@ FT <- function(S, alpha, mu, sig, s){  #s = forward maturity, alpha = mrr, S = s
 
 #at-the-money strike price: spread of forwards at t = 0
 K <- abs(FT(params$S, params$alpha, params$mu, params$sigma, .5) - FT(params$S, params$alpha, params$mu, params$sigma, 1))
-
-
-
-
+ft05 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, .5)
+ft1 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, 1)
+spread = abs(ft05-ft1)
+payoffSpread <- apply(cbind(zero,spread-K), MARGIN = 1, max)
+call_value4 <- discrate*mean(payoffSpread)
+se4 <- sd(payoffSpread)/sqrt(params$M)
+results4 <- list('call value' = call_value4, "se" = se4)
+print(results4)
   
