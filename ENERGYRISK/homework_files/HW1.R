@@ -99,14 +99,12 @@ for (ii in 1:params$M){
     rnd = randPolarRejc()
     lnSmat1[ii,jj] = lnS(lnSmat1[ii, (jj-1)], params, sigrdt, dt, rnd)
     lnSmat2[ii,jj] = lnS(lnSmat2[ii, (jj-1)], params, sigrdt, dt, -rnd)
-    meanStorage1[ii, jj] = mean(exp(lnSmat1[ii, 1:jj]))
-    meanStorage2[ii, jj] = mean(exp(lnSmat2[ii, 1:jj]))
   }
 }
 S1 <- as.data.frame(exp(lnSmat1))
 S2 <- as.data.frame(exp(lnSmat2))
 colnames(S1) <- time; colnames(S2) <- time; 
-AznS1 <- apply(S1, 1, mean); AznS2 <- apply(S2, 1, mean) #get row means of spot price sims
+AznS1 <- apply(S1[,2:11], 1, mean); AznS2 <- apply(S2[,2:11], 1, mean) #get row means of spot price sims
 zero = rep(0, params$M)
 payoff_S1 = apply(cbind(zero,AznS1-params$K), 1, max)
 payoff_S2 = apply(cbind(zero,AznS2-params$K), 1, max)
@@ -125,16 +123,17 @@ abline(h = results2$call_value)
 
 ###################### Problem 3: value knock-out barrier option ######################
 barrier <- c(0.9*params$S,  1.1*params$S)
-S1_3mo <- S1[,7:11]; S2_3mo <- S2[,7:11]
+time = as.matrix(seq(0,0.5,0.05))
+S1_3mo <- S1[,6:11]; S2_3mo <- S2[,6:11]
 tempB1 <- numeric(params$M); tempB2 <- tempB1
 for (ii in 1:nrow(S1_3mo)){
-  if(any(S1_3mo[ii,] < barrier[1] | S1_3mo[ii,] > barrier[2])){
+  if(any(S1_3mo[ii,] <= barrier[1] | S1_3mo[ii,] >= barrier[2])){
     tempB1[ii] <- 0
   }
   else{
     tempB1[ii] <- S1_3mo[ii,ncol(S1_3mo)]
   }
-  if(any(S2_3mo[ii,] < barrier[1] | S2_3mo[ii,] > barrier[2])){
+  if(any(S2_3mo[ii,] <= barrier[1] | S2_3mo[ii,] >= barrier[2])){
     tempB2[ii] <- 0
   }
   else{
@@ -162,10 +161,10 @@ FT <- function(S, alpha, mu, sig, s){  #s = forward maturity, alpha = mrr, S = s
 }
 
 #at-the-money strike price: spread of forwards at t = 0
-K <- abs(FT(params$S, params$alpha, params$mu, params$sigma, .5) - FT(params$S, params$alpha, params$mu, params$sigma, 1))
+K <- FT(params$S, params$alpha, params$mu, params$sigma, 1)- FT(params$S, params$alpha, params$mu, params$sigma, .5)
 ft05 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, .5)
 ft1 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, 1)
-spread = abs(ft05-ft1)
+spread = ft1-ft05
 payoffSpread <- apply(cbind(zero,spread-K), MARGIN = 1, max)
 call_value4 <- discrate*mean(payoffSpread)
 se4 <- sd(payoffSpread)/sqrt(params$M)
