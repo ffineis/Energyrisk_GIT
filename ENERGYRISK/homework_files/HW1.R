@@ -2,9 +2,7 @@
 # Frank Fineis
 library(ENERGYRISK)
 
-########## Problem 1: iterative convergence of Jump diffusion parameters ###########
-data <- read.table('./data/csv/ICENBP.txt', sep = "\t", header = T)
-returns <- diff(log(data$St))[-1]
+#### Problem 1: Recursive Filter, estimating Jump diffusion parameters ###
 
 JPit <- function(R = returns, limit = 3, tolVar = "phi", tol = 1){
   tolVarnames = c("phi", "gamma", "kappa_bar", "nJumps")
@@ -34,20 +32,27 @@ JPit <- function(R = returns, limit = 3, tolVar = "phi", tol = 1){
     jumpStore$jumps <- returns[which(abs(returns)>cutoff)]
     jumpStore$nojumps <- returns[which(abs(returns)<=cutoff)]
     jumpStore$nJ <- length(jumpStore$jumps)
+    # calculate new jump diffusion parameters
     phi = jumpStore$nJ/(nObs/365)
     sigma = sd(jumpStore$nojumps)*(sqrt(365))
     kappa_bar = mean(jumpStore$jumps)
     gamma = sd(jumpStore$jumps)
+    # store these new parameters
     temp = data.frame(c(jumpStore$nJ, phi, sigma, kappa_bar, gamma))
     rownames(temp) <- c("nJumps", "phi", "sigma", "kappa_bar", "gamma")
     colnames(temp) <- paste("Iteration ", ctr, sep = "")
     JDiters <- cbind(JDiters, temp)
+    # identify which variable is the tolerance parameter,
+    # check to see if change in tolerance parameter is below convergence threshold (tol) 
     tvOld <- JDiters[which(rownames(JDiters)==tolVar),ctr-1]
     tvNew <- JDiters[which(rownames(JDiters)==tolVar),ctr]
     if(abs(tvOld-tvNew)<tol){conv=T}
   }
   return(JDiters)
 }
+
+data <- read.table('./data/csv/ICENBP.txt', sep = "\t", header = T)
+returns <- diff(log(data$St))[-1]
 results1 <- JPit(R = returns, limit = 3, tolVar = "phi", tol = 1)
 print(results1)
 
@@ -101,23 +106,28 @@ for (ii in 1:params$M){
     lnSmat2[ii,jj] = lnS(lnSmat2[ii, (jj-1)], params, sigrdt, dt, -rnd)
   }
 }
+# transform from log prices to regular spot prices.
 S1 <- as.data.frame(exp(lnSmat1))
 S2 <- as.data.frame(exp(lnSmat2))
 colnames(S1) <- time; colnames(S2) <- time; 
-AznS1 <- apply(S1[,2:11], 1, mean); AznS2 <- apply(S2[,2:11], 1, mean) #get row means of spot price sims
+# get row means of simulated spot prices for valuing Azn opts
+AznS1 <- apply(S1[,2:11], 1, mean); AznS2 <- apply(S2[,2:11], 1, mean)
 zero = rep(0, params$M)
+# payoff for regular and antithetic Azn opts
 payoff_S1 = apply(cbind(zero,AznS1-params$K), 1, max)
 payoff_S2 = apply(cbind(zero,AznS2-params$K), 1, max)
+# average the two payoffs 
 payoff = apply(cbind(payoff_S1, payoff_S2), MARGIN = 1, FUN = mean)
 call_value2 = discrate*mean(payoff)
 se2 = sd(payoff)/sqrt(params$M)
 results2 = list("call_value" = call_value2, "se"  = se2)
 print(results2)
 
-avgStore <- numeric(params$M)
-for (k in 1:params$M){avgStore[k] <- mean(payoff[1:k])}
-plot(1:params$M, avgStore, type = "l", lwd = 3, xlab = "Number of Simulations",
-     ylab = "Averaged Payoff", main = "MC Asian Call Option, Antithetics")
+#plot evolution of cumulative average payoff.
+avg_storage = matrix(0,params$M,1)
+for(k in 1:params$M){avg_storage[k] = discrate*mean(payoff[1:k])}
+plot(avg_storage, type = "l", lwd = 3, xlab = "Number of Simulations",
+     ylab = "Avg-ed, Discounted Payoff", main = "MC Asian Call Option, Antithetics", cex.lab = .85)
 abline(h = results2$call_value)
 
 
@@ -125,6 +135,7 @@ abline(h = results2$call_value)
 barrier <- c(0.9*params$S,  1.1*params$S)
 time = as.matrix(seq(0,0.5,0.05))
 S1_3mo <- S1[,6:11]; S2_3mo <- S2[,6:11]
+# store survival of individual price paths in tempB1, tempB2
 tempB1 <- numeric(params$M); tempB2 <- tempB1
 for (ii in 1:nrow(S1_3mo)){
   if(any(S1_3mo[ii,] <= barrier[1] | S1_3mo[ii,] >= barrier[2])){
@@ -140,6 +151,7 @@ for (ii in 1:nrow(S1_3mo)){
     tempB2[ii] <- S2_3mo[ii,ncol(S2_3mo)]
   }
 }
+#calculate payoffs: max(0, survival_price-K)
 payoff_B1 = apply(cbind(zero,tempB1-params$K), 1, max)
 payoff_B2 = apply(cbind(zero,tempB2-params$K), 1, max)
 payoff_barrier <- apply(cbind(payoff_B1, payoff_B2), 1, mean)
@@ -153,21 +165,22 @@ print(results3)
 ####### Problem 4: value 6 mo option on on 1yr & 6 mo forward price spreads ########
 
 #From Thomas Fillebeen: Schwartz one factor model forward curve function
-FT <- function(S, alpha, mu, sig, s){  #s = forward maturity, alpha = mrr, S = spot price, sig = sd(Spots)
+FT <- function(S, alpha, mu, sig, s){  #s = time until maturity, alpha = mrr, S = spot price, sig = sd(Spots)
   eaT = exp(-alpha * s)
   sig2a = sig * sig / (2 * alpha)
   FT = exp(log(S) * eaT + (mu - sig2a) * (1 - eaT) + sig2a * (1 - eaT * eaT) / 2)
   return(FT)
 }
 
-#at-the-money strike price: spread of forwards at t = 0
-K <- FT(params$S, params$alpha, params$mu, params$sigma, 1)- FT(params$S, params$alpha, params$mu, params$sigma, .5)
+#price the option on the spread itself (so K is $0.00)
+K <- 0
+#apply FT function to spot prices at maturity date to get forward prices in future
 ft05 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, .5)
 ft1 <- sapply(X = S1[,ncol(S1)], FUN = FT, params$alpha, params$mu, params$sigma, 1)
 spread = ft1-ft05
 payoffSpread <- apply(cbind(zero,spread-K), MARGIN = 1, max)
 call_value4 <- discrate*mean(payoffSpread)
 se4 <- sd(payoffSpread)/sqrt(params$M)
-results4 <- list('call value' = call_value4, "se" = se4)
+results4 <- list("call value" = call_value4, "se" = se4)
 print(results4)
   
