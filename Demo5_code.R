@@ -45,7 +45,10 @@ matrixIndex = seq(1,striplength-1,1)
 offset = 0
 matrixNb = matrix(0, striplength-1,striplength-1)
 for(v in 1:11){matrixNb[v,v:11] = c(1:(12-v)) + offset; offset = offset + 12- length(1:v)}
-#constraint matrix
+
+#strMatrix: place constraints on monthly capacity. First month can only be filled up to max monthly storage,
+#second month is max 2 months' storage, but also decrease max storage back down
+# to zero so that there's no gas in storage at last month
 strMatrix = matrix(0,striplength-1,length(guess))
 for(k in 1:11){strMatrix[k,] = seq(1,length(guess),1)}
 withrawalRemoval=0
@@ -68,7 +71,7 @@ for (i in matrixIndex){
   storedAmount = tempIndex
 }
 
-# injection constraint
+#strInjectC: injection constraint matrix
 strInjectC = matrix(0,striplength-1, length(guess))
 offset = 0
 for (i in matrixIndex){strInjectC[i,(c(1:(12-i)) + offset)] = 1;
@@ -79,8 +82,9 @@ for (i in matrixIndex){strWithC[i,matrixNb[,i]] = 1}
 A = rbind(strMatrix,strInjectC,strWithC) #storage constraints are stored on top of injection constraints are stored on top of withdrawal constraints
 x = guess
 b = matrix(0,3*dim(strMatrix)[1],1)
-b[1:11]=S5_StorageContract$capacity;b[12:22]=t(injWith["Max_injection",1:11])
-b[23:33] = t(injWith["Max_withdrawal", 1:11])
+b[1:11]=S5_StorageContract$capacity #never exceed total capacity
+b[12:22]=t(injWith["Max_injection",1:11]) #monthly max injection rates
+b[23:33] = t(injWith["Max_withdrawal", 1:11]) #month max withdrawal rates
 negConstraint = rep(0,33)
 #Vectorize spreads in order specified in matrixNb. There has to be a better way of doing this than method below.
 VfSpread = matrix(0,66,1);offset=0;a=1;rowUp=11;
@@ -92,5 +96,32 @@ for (j in 2:12){
  a = a+11-offset; rowUp=rowUp+11-offset;offset = offset +1} #VfSpread has same values as fSpread
 
 ####### SOLVING
-monthRevenue = pmax(VfSpread,0)*S5_StorageContract$convRate #c vector
+monthRevenue = pmax(VfSpread,0)*S5_StorageContract$convRate #c vector. Save optimization time by saying we'll never enter
+dir = c(rep("<=",33))                                       #into a negative spread. monthRevenue is like the objective function. List of delta-F's.
+sol = Rglpk_solve_LP(obj=c(monthRevenue),mat=A,dir=dir,rhs=c(b),types = rep("I"),max=TRUE)
+#get solution: vector of positions (v_ij) specifying when and how much to inject/withdraw
+sol$solution
+#make sure monthly storage constraint obeyed, and max injection/withdrawal rate per month ok:
+A%*%sol$solution <= b
+#sol$optimum not the same as Thomas'?
+
+#plot storage level
+storageLevel = rbind(0, strMatrix%*%sol$solution) #strMatrix imposed total storage constraint on month by month basis.
+                                                  #multiply with solution to see evolution of storage level over months.
+par(mar = c(4.5, 3.5, 3, 6)+0.1)
+plot(S5_ForwardCurve$Date, t(storageLevel), type = "l", lwd = 1.5, xlab = "Time", ylab = "", main = "Storage and Forward Strip")
+mtext("Volume (MMBtu)", side = 2, line = 2, cex = 0.75) #line: how far away from border text will be placed.
+par(new = T)
+plot(S5_ForwardCurve$Date, S5_ForwardCurve$Forward, type = "l", xlab = "Time", ylab = "", col = "red",
+     lwd = 2, lty = 2, yaxt = "n") #plot forward prices on top in blue, don't overwrite y axis.
+axis(4, ylim = c(min(S5_ForwardCurve$Forward), max(S5_ForwardCurve$Forward)), line = 0, cex.axis = 0.75) #line = 0: place on right border
+mtext("Price (pence/therm)", side = 4, line = 1.9, cex = 0.75)
+legend("topleft", legend = c("Storage", "Forward Strip"), col = c("black", "red"), lwd = c(1.5, 2), lty = c(1,2), cex = 0.6)
+
+
+
+
+
+######## 
+
 
