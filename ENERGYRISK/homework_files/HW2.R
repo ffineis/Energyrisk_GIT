@@ -64,7 +64,7 @@ for (i in i.index) {
 
 
 ##### Value AMERICAN CALL Option ####
-mult = 1 #call, not put
+mult = 1 #call, not put. Put is valued at K-S.
 # i) Fitted forward prices, spot price data fitted correctly
 Forw = exp(as.numeric(a_is[length(j.index)]) + level_x)
 V = pmax(0, mult * (Forw- tree_Params$K))
@@ -103,6 +103,56 @@ for (i in i.index) {
   cat("Prices:\n")
   print(Forw)
   cat("American Call Values:\n")
+  print(V)
+  
+  offset = offset +1 
+}
+
+
+##### Value AMERICAN PUT Double Barrier Knock-out Option ####
+mult = -1 #call, not put. Put is valued at K-S.
+barrier = c(16, 30)
+# i) Fitted forward prices, spot price data fitted correctly
+Forw = exp(as.numeric(a_is[length(j.index)]) + level_x)
+KOed = which(Forw<barrier[1] | Forw>barrier[2])
+V = pmax(0, mult * (Forw- tree_Params$K))
+V[KOed] <- 0
+
+# forward prices and option values at time = 0.5 yr
+cat("Time step: ", 6, "\n", sep="")
+cat("Prices:\n")
+print(Forw)
+cat("American Call Values:\n")
+print(V)
+
+i.index = seq(from=6-1, to=0, by=-1)
+offset = 1
+
+# backward induction steps:
+for (i in i.index) {
+  # moving backwards, get spot prices on preliminary tree at previous time
+  level_xt = -c(-tree_Params$delta_x*((i):1),tree_Params$delta_x*(0:i))
+  # Get transition probabilities to estimate expected value
+  j  = level_xt
+  #print(sprintf("level_xt: %s", level_xt))
+  prob = prob(j, tree_Params$delta_t, tree_Params$alpha, tree_Params$delta_x, tree_Params$volatility)
+  
+  # Sub bind the expectation values together
+  E_V = cbind(V[1:(length(V)-2)],V[2:(length(V)-1)],V[3:length(V)])
+  # F is the vector of prices at each time step and node
+  Forw = exp(as.numeric(a_is[length(j.index)-offset]) + level_xt)
+  KOed = which(Forw<barrier[1] | Forw>barrier[2])
+  
+  # Now value is either exercising option or EV of not exercising
+  V = pmax(mult*(Forw-tree_Params$K), discount * diag(E_V%*%prob))
+  V[KOed] <- 0
+  
+  if (i==0){Forw = Forw[1]; V= V[1]}
+  # Print out the results as the function is running to keep track
+  cat("Time step: ", i, "\n", sep="")
+  cat("Prices:\n")
+  print(Forw)
+  cat("American Put/Barrier Values:\n")
   print(V)
   
   offset = offset +1 
