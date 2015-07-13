@@ -1,4 +1,4 @@
-### CFRM 520 HW2. Frank Fineis.
+### CFRM 520 HW2.
 library(ENERGYRISK)
 source("./R/Lattices.R")
 data(S4_Params)
@@ -118,7 +118,7 @@ for (i in i.index) {
 
 
 ##### Problem 3: Value AMERICAN PUT Double Barrier Knock-out Option ####
-mult = -1 #call, not put. Put is valued at K-S.
+mult = -1 #put, not call. Put is valued at K-S.
 barrier = c(16, 30)
 # i) Fitted forward prices, spot price data fitted correctly
 Forw = exp(as.numeric(a_is[length(j.index)]) + level_x)
@@ -174,42 +174,48 @@ for (i in i.index) {
 ##### Problem 4: 3-level (indexing at 0) trinomial tree solution #####
 #What do we need to fill out the 3rd level of the tree?
 # simplified tree price levels
-# Option values (i.e. discounted expected value of option values at theoretical j = 4 level)
-# transition probabilities to go from level 3 to theoretical j = 4 level
+# Option values (i.e. discounted expected value of option values level i = 4)
+# transition probabilities to go from level 3 to level i = 4
 # State prices at level 3.
 
 params = S4_Params[,c(1:4)]
-alpha = 0.338; sigma = 0.305
-dt = 0.083; dx = 0.153; r = params["R_ts",1]
-#simplified prices at level 3:
-level_x3 = dx*seq(from = -3, to = 3, by = 1)
-nbNodes = 7 #number of nodes at 3rd level
-j = 3
+alpha = 0.338; sigma = 0.305404
+dt = 0.08333333; dx = 0.152702; r = params["R_ts",1]
 
-#transition probabilities: From Thomas Fillebeen
-prob <- function(x, dt, alpha, dx, vol, K){ 
-  pu =  1/2*((vol^2*dt + alpha^2*(x^2)*dt^2)/dx^2) -
-          ((alpha*x*dt)/dx)
-  pd = 1/2*((vol^2*dt + alpha^2*(x^2)*dt^2)/dx^2) +
-          ((alpha*x*dt)/dx)
+#simplified tree prices at level 2:
+level_x2 = dx*seq(from = -2, to = 2, by = 1)
+#simplified tree prices at level 3:
+level_x3 = dx*seq(from = -3, to = 3, by = 1)
+
+#number of nodes at 3rd level
+nbNodes = 7
+
+#transition probabilities function:
+prob <- function(x, dt, alpha, dx, vol){ 
+  pu =  1/2*((((vol^2)*dt + (alpha^2)*(x^2)*dt^2)/(dx^2)) -
+          ((alpha*x*dt)/dx))
+  pd = 1/2*((((vol^2)*dt + (alpha^2)*(x^2)*dt^2)/(dx^2)) +
+          ((alpha*x*dt)/dx))
   pm = 1 - pu - pd
   prob = list(pu = pu, pm = pm, pd = pd)
   return(prob)
 }
 
-# transition probs
-level_x2 = dx*seq(from = -2, to = 2, by = 1)
-
-# Calculate a_3 so we can get option values at j = 3
-df = exp(-S4_Params["R_ts",1]*dt)
-Q_2 = c(0.0252, 0.2199, 0.4998, 0.2199, 0.0252)
-#Want Q_level3: will have 7 nodes.
-Q_3 = numeric(length = nbNodes)
-#according to "State prices continued" slide
+# transition probs, from level 2 to level 3
 P_2 = c(.1401, .6635, .1964, .1530, .6659, .1811,
         .1667, .6667, .1667, .1811, .6659, .1530,
         .1964, .1530, .6635, .1401)
 
+# Calculate a_3 so we can get option values at j = 3
+df = exp(-S4_Params["R_ts",1]*dt)
+
+#state prices at level 2:
+Q_2 = c(0.0252, 0.2199, 0.4998, 0.2199, 0.0252)
+
+#Want Q_3: state prices at level 3 (will have 7 nodes)
+Q_3 = numeric(length = nbNodes)
+
+#according to "State prices continued" slide
 Q_3[1] = Q_2[1]*P_2[1]*df
 Q_3[nbNodes] = Q_3[1]
 Q_3[2] = Q_2[1]*P_2[2]*df + Q_2[2]*P_2[4]*df
@@ -218,7 +224,29 @@ Q_3[3] = Q_2[1]*P_2[3]*df + Q_2[2]*P_2[5]*df + Q_2[3]*P_2[7]*df
 Q_3[nbNodes-2] = Q_3[3]
 Q_3[4] = Q_2[2]*P_2[6]*df + Q_2[3]*P_2[8]*df + Q_2[4]*P_2[10]*df
 
+#E[x_(i+1),j] = \bar{x}_{i,j} - alpha*\bar{x}_{i,j}*dt
+Exij = level_x3-(alpha*level_x3*dt)
 
+# Transition probabilities from i = 3 to i = 4:
+P_3 <- numeric(length = nbNodes*3)
+offset = 1
+for (j in 1:nbNodes){
+  trans = prob(level_x3[j], dt, alpha, dx, sigma)
+  P_3[offset:(offset+2)] = c(trans$pu, trans$pm, trans$pd)
+  offset = offset + 3
+}
 
+#Assemble 3rd level of simplified tree:
+L3 = as.data.frame(matrix(0, nrow = 6, ncol = 7))
+colnames(L3) = c("-3", "-2", "-1", "0", "1", "2", "3")
+rownames(L3) = c("xij", "E[xij]", "Qij", "pu", "pm", "pd")
+offset = 1
+for (k in 1:ncol(L3)){
+  L3[1,k] = level_x3[k]
+  L3[2,k] = Exij[k]
+  L3[3,k] = Q_3[k]
+  L3[4:6,k] = P_3[offset:(offset+2)]; offset = offset + 3
+}
 
+print(L3)
 
