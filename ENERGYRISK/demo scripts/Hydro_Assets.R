@@ -108,7 +108,7 @@ for(j in 1:N){
     # Use 30 b/c that is the amount we want to index by in the peak 
     # period minus current period
     # Capture the 13th largest number to match the effeciency rate of
-    # the plant 13 (peak) /18(oPeak)=72.22%
+    # the plant 13 (peak) /18(oPeak)=72.22%. Decide when in the peak period to generate power.
     valueStor[(15:44)+offset,"PumpGen"] = as.numeric(valueStor[(15:44)+offset,"Power"]>=
     valueStor[order(valueStor[(15:44)+offset,"Power"], decreasing=TRUE)[13]+offset+14,"Power"])
     }
@@ -181,7 +181,7 @@ head(simMatrix)
 plot(c(avgOptionValue),type="l", ylab="Payoff", xlab="Number of Simulations")
 legend("topright",legend=c("Simple Method"),col = c(1), lwd=c(1.5), lty=c(1), cex=0.8)
 title("Monte Carlo Convergence of Option Value")
-# Plot electricity prices for a simulated path
+# Plot electricity prices for a simulated path: MRJD
 plot(valueStor[,"Power"],type="l", col=2,ylab="Power Prices", xlab="Number Time Step")
 
 # Plot CT and volume pumped/generated

@@ -73,10 +73,39 @@ for (j in 1:param$N){
       valueStor[(15:44)+offset,"PumpGen"]=as.numeric(valueStor[(15:44)+offset,"Power"]>=
         valueStor[order(valueStor[(15:44)+offset,"Power"],decreasing=TRUE)[13]+offset+14,"Power"])
     }
-    
-    
+    #Pumping cost: average of overnight price (8:00 PM to 6:30 AM)
+    if(i ==(47)){
+      valueStor[(1:48)+offset, "PumpingCost"] = sum(valueStor[which(valueStor[(1:14)+offset, "PumpGen"]==-1), "Power"])/
+        length(which(valueStor[(1:14)+offset, "PumpGen"]==-1))
+    }
+    else if(i == (48+offset-1)){
+      valueStor[(1:48)+offset, "Pumping Cost"] = sum(valueStor[c((-3:14)+offset),"Power"])/length(c((-3:14)+offset))
+    }
+
+    #Calculate generating Revenue: every time generation is 1, add revenue
+  if(i==(48+offset-1)){
+    diviser = length(which(valueStor[(1:48)+offset,"PumpGen"]==1))
+    #Catch the case when there is no generating occuring in a day
+    if(diviser == 0){diviser <- 1}
+    valueStor[(1:48)+offset,"GenRevenue"] = sum(valueStor[which(valueStor[(1:48)+offset,"PumpGen"]==1)+offset,"Power"])/diviser
+    #5) Volume Pumped/Generated
+    if(all((valueStor[(1:48)+offset,"PumpingCost"]/valueStor[(1:48)+offset,"GenRevenue"])< param$Effeciency)){
+      valueStor[(1:48)+offset,"volPumped"] = valueStor[(1:48)+offset,"PumpGen"]*100
+    }
+    #6) Option Value
+    valueStor[(1:48+offset),"CT"] = valueStor[(1:48+offset),"Power"]*valueStor[(1:48)+offset,"volPumped"]*
+      exp(-param$r*(as.numeric(as.Date(storDates[trackDate]) - as.Date(valDate))+(valueStor[(1:48+offset),"Period"]-1)/48)/365)
+    trackDate = trackDate +1
+  }
+   
+  if(i == 48){offsetDate = offsetDate + 1}
+  F_t1 = F_t2 #reset initial starting futures price once we've moved up a day
+  #Check to see that we're meeting the efficiency cutoff of 72.22% (sum(released energy)/sum(pumped energy))
+  Echeck = abs(sum(valueStor[which(valueStor[,"volPumped"]>0),"volPumped"]))/abs(sum(valueStor[which(valueStor[,"volPumped"]<0),"volPumped"]))
+  #if (Echeck > param$Efficiency){print("WARNING: Efficiency is too high")}
   }
   
-
+  #End up with N option values:
+  simMatrix[j,]=c(j,sum(valueStor[,"CT"]))
 }
 
