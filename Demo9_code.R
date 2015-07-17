@@ -19,7 +19,7 @@ storDates = as.Date(S9_ForwardCurve$Date[1]:S9_ForwardCurve$Date[nrow(S9_Forward
 KCap = 90; KFloor = 70; KSwap = 80;
 VOM = 1.50; Emission = 10; heatRate = 7.25; r = 0.05
 K = VOM+Emission
-scaleFactor = 0.1538 #convert dollars/barel to $/MMBtu
+scaleFactor = 0.1538 #convert dollars/barrel to $/MMBtu
 
 #store simulated prices, payoffs
 valueStor = matrix(0, nbDays, 5)
