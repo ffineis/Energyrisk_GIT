@@ -1,6 +1,7 @@
 ### CFaR demo 9 code
 library(ENERGYRISK)
 library(zoo)
+library(lubridate)
 
 S9_ForwardCurve = read.csv("/Users/fineiskid/Desktop/AMATH_Summer_UW/CFRM_520/EnergyRisk/Energyrisk_GIT/ENERGYRISK/data/csv/S9_ForwardCurve.csv")
 S9_Params = read.csv("/Users/fineiskid/Desktop/AMATH_Summer_UW/CFRM_520/EnergyRisk/Energyrisk_GIT/ENERGYRISK/data/csv/S9_ModelParams.csv")
@@ -152,10 +153,14 @@ Prob2 = t(as.data.frame(colMeans(bucketStor[(N+1):(2*N),])))
 Prob3 = t(as.data.frame(colMeans(bucketStor[((2*N)+1):(3*N),])))
 Prob4 = t(as.data.frame(colMeans(bucketStor[((3*N)+1):(4*N),])))
 results = list(Prob1 = Prob1, Prob2 = Prob2, Prob3 = Prob3, Prob4 = Prob4)
-for (k in 1:4){rownames(results[[k]]) <- "Cashflow"; colnames(results[[k]]) <- unique(months(storDates))}
+for (k in 1:4){rownames(results[[k]]) <- "Cashflows"; colnames(results[[k]]) <- unique(months(storDates))}
 
-# Standard Error per Bucket in portfolio:
-se = apply(bucketStor[bucketStor((3*N)+1):(4*N), MARGIN = 2, FUN = sd)/sqrt(N)
+# Monthly portfolio payoffs:
+print(results[[4]])
+
+# Standard error per time bucket:
+se = apply(bucketStor[((3*N)+1):(4*N),], MARGIN = 2, FUN = sd)/sqrt(N)
+cat("Std. Errors:\n", se)
 
 #Plotting EaR:
 percentile = matrix(0,10,length(indexEndDates)) #storage matrix
