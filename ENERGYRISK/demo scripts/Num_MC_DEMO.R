@@ -118,7 +118,7 @@ title("Monte Carlo European Call Value")
 # Add change of delta to parameter variable
 # Set seed so that part 1, 2 and 3 share the same randomized numbers
 set.seed(1)
-param = c(param,deltaS = 0.01)
+param = c(param,deltaS = 0.01) #shouldn't this be 1% of S?
 lnS_G = matrix(0,nSims,nObs);lnS_G_PDS = matrix(0,nSims,nObs);lnS_G_NDS = matrix(0,nSims,nObs)
 # 1) Estimate S then +/- delta, the convert back to ln(S)
 lnS_G[,1]= lnS;lnS_G_PDS[,1] = log(exp(lnS) + param$deltaS)

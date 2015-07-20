@@ -3,7 +3,7 @@
 library(ENERGYRISK)
 library(lubridate)
 library(zoo)
-source("./R/ES1_F.R")
+source("./ENERGYRISK/R/ES1_F.R")
 data(data_S7)
 #get model parameters to project Power and rainfall evolution
 head(S7_ModelParams)

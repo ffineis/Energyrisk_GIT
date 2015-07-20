@@ -59,7 +59,6 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 
 
-<hr />
 <div id="overview" class="section level1">
 <h1>Overview</h1>
 <p>My approach to Homework 3 was to run all of the Monte Carlo simulations at once. I value the cap, floor, swap, fuel-switching, and collar options together in one large (364 x 8) matrix, <code>valueStor</code>, 200 times, aggrogate each option’s payoffs into monthly time-buckets, and then average the bucketed payoffs on a per-month basis. In this way, we only wait for a single Monte Carlo simulation and avoid having to re-simulate power, gas, and/or heating oil prices for every problem.</p>
@@ -150,9 +149,12 @@ print(results[[4]])</code></pre>
 ## Cashflows 1275.517  465.9775 128.968 -13.11923 31.49503</code></pre>
 <pre class="r"><code># Standard error per time bucket:
 se = apply(bucketStor[((3*N)+1):(4*N),], MARGIN = 2, FUN = sd)/sqrt(N)
+se = t(as.data.frame(se)); colnames(se) &lt;- unique(months(storDates))
 print(se)</code></pre>
-<pre><code>##  [1]  69.39328 106.93507 136.81858 121.55516 135.58256 140.45933 133.51854
-##  [8] 149.34708 112.53479 103.25313  87.15467 108.59850</code></pre>
+<pre><code>##     January February    March    April      May     June     July   August
+## se 69.39328 106.9351 136.8186 121.5552 135.5826 140.4593 133.5185 149.3471
+##    September  October November December
+## se  112.5348 103.2531 87.15467 108.5985</code></pre>
 <p>Finally, we can get the empirical quantiles for each of the portfolio’s monthly cashflows just as we did in Demo 9, but now we are only asked for the quantiles in 10% intervals. Plotting the monthly quantiles, we can see the portolio’s estimated monthly cashflow at risk:</p>
 <pre class="r"><code>percentile = matrix(0,10,length(indexEndDates)) #storage matrix
 for(t in 1:length(indexEndDates)){

@@ -6,14 +6,17 @@ data(data_NBP)
 #Mean Reversion Process
 #data_NBP <- as.zoo(data_NBP)
 plot(data_NBP, type = "l", xlab = "Time (Month)", ylab = "Spot Price", main = "Spot Price Aug 2007-2008")
+
+#log returns
 log_ret = diff(log(data_NBP$St))
 
+#log spot prices:
 lnSt <- log(data_NBP$St[-nrow(data_NBP)])
 plot(lnSt, log_ret)
 abline(0,0)
 dt = 1/365
 nObs = length(lnSt)
-MR_reg = lm(log_ret~lnSt)
+MR_reg = lm(log_ret~lnSt) #log returns are linear function of log prices
 results = summary(MR_reg)
 a0 = MR_reg$coefficients[1]; a1 = MR_reg$coefficients[2]
 SE = results$coefficients[,"Std. Error"]

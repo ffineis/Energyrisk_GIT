@@ -7,6 +7,7 @@ title: "CFRM 520 Homework 3"
 author: "Frank Fineis"
 date: "July 17, 2015"
 output:
+  html_document: default
   pdf_document:
     highlight: pygments
 ---
@@ -125,8 +126,10 @@ Again, we average each of the portfolio's 200 monthly cashflows with the ``colMe
 print(results[[4]])
 
 # Standard error per time bucket:
+
 se = apply(bucketStor[((3*N)+1):(4*N),], MARGIN = 2, FUN = sd)/sqrt(N)
-cat("Std. Errors\n:", se)
+se = t(as.data.frame(se)); colnames(se) <- unique(months(storDates))
+print(se)
 ```
 
 Finally, we can get the empirical quantiles for each of the portfolio's monthly cashflows just as we did in Demo 9, but now we are only asked for the quantiles in 10\% intervals. Plotting the monthly quantiles, we can see the portolio's estimated monthly cashflow at risk:

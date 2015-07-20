@@ -1,7 +1,8 @@
 #Code for Demo 8: Value at Risk
-load("./data/S8_ForwardCurve.rda")
+load("../data/S8_ForwardCurve.rda")
 S8_ForwardCurve
 library(moments)
+library(ENERGYRISK)
 
 set.seed(1)
 #contract parameters
